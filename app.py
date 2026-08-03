@@ -47,6 +47,31 @@ def _contrasting_text_color(rgb_string):
 
 RANK_TEXT_COLORS = [_contrasting_text_color(c) for c in RANK_COLORS]
 
+
+def format_inr(value, decimals=2):
+    """Format a number using the Indian numbering system (last 3 digits,
+    then groups of 2): 10000000 -> '1,00,00,000' instead of '10,000,000'."""
+    is_negative = value < 0
+    value = abs(value)
+    num_str = f"{value:.{decimals}f}"
+    integer_part, _, decimal_part = num_str.partition(".")
+
+    if len(integer_part) > 3:
+        last_three = integer_part[-3:]
+        remaining = integer_part[:-3]
+        groups = []
+        while len(remaining) > 2:
+            groups.insert(0, remaining[-2:])
+            remaining = remaining[:-2]
+        if remaining:
+            groups.insert(0, remaining)
+        formatted_int = ",".join(groups) + "," + last_three
+    else:
+        formatted_int = integer_part
+
+    result = f"{formatted_int}.{decimal_part}" if decimals > 0 else formatted_int
+    return f"-{result}" if is_negative else result
+
 st.set_page_config(page_title="Guided Asset Allocation Tool", page_icon="📊", layout="wide")
 
 
@@ -128,6 +153,7 @@ if st.session_state.step == "input":
     amount = st.number_input(
         "Investment amount (₹)", min_value=1000.0, value=100000.0, step=1000.0, format="%.2f"
     )
+    st.caption(f"You entered: ₹{format_inr(amount)}")
 
     st.caption(
         f"Bank FD guardrail for **{profile_label}**: "
@@ -161,20 +187,24 @@ elif st.session_state.step == "allocation":
         "Weight (%)": (allocation.values * 100).round(2),
         "Amount (₹)": (allocation.values * amount).round(2),
     })
+    alloc_display_df = alloc_df.copy()
+    alloc_display_df["Amount (₹)"] = alloc_display_df["Amount (₹)"].apply(format_inr)
 
     col1, col2 = st.columns([1, 1])
     with col1:
-        st.dataframe(alloc_df, hide_index=True, use_container_width=True)
+        st.dataframe(alloc_display_df, hide_index=True, use_container_width=True)
     with col2:
         pie_chart_df = alloc_df.copy()
         pie_chart_df["Category"] = pie_chart_df["Category"].str.upper()
+        pie_chart_df["Amount Display"] = pie_chart_df["Amount (₹)"].apply(format_inr)
         fig_pie = px.pie(
             pie_chart_df, names="Category", values="Amount (₹)", hole=0.4,
             color_discrete_sequence=PIE_COLORS,
+            custom_data=["Amount Display"],
         )
         fig_pie.update_traces(
             textinfo="percent+label",
-            hovertemplate="%{label}<br>₹%{value:,.2f} (%{percent})<extra></extra>",
+            hovertemplate="%{label}<br>₹%{customdata[0]} (%{percent})<extra></extra>",
         )
         fig_pie.update_layout(showlegend=False, margin=dict(t=10, b=10, l=10, r=10))
         st.plotly_chart(fig_pie, use_container_width=True)
@@ -230,6 +260,7 @@ elif st.session_state.step == "done_no_topsis":
         "Weight (%)": (allocation.values * 100).round(2),
         "Amount (₹)": (allocation.values * amount).round(2),
     })
+    alloc_df["Amount (₹)"] = alloc_df["Amount (₹)"].apply(format_inr)
     st.dataframe(alloc_df, hide_index=True, use_container_width=True)
 
     for category in CATEGORIES:
@@ -312,7 +343,7 @@ elif st.session_state.step == "topsis":
                 fund_amount = float(row["fund_amount"].iloc[0])
                 fund_name = row["fund_name"].iloc[0]
                 seg_amounts.append(fund_amount)
-                seg_labels.append(f"<b>{fund_name.upper()}</b><br><b>₹{fund_amount:,.0f}</b>")
+                seg_labels.append(f"<b>{fund_name.upper()}</b><br><b>₹{format_inr(fund_amount, 0)}</b>")
             else:
                 seg_amounts.append(0.0)
                 seg_labels.append("")
@@ -341,6 +372,7 @@ elif st.session_state.step == "topsis":
     for category in CATEGORIES:
         top5 = topsis_results[category]
         category_amount = allocation[category] * amount
-        st.markdown(f"**{category.capitalize()}** — ₹{category_amount:,.2f}")
+        st.markdown(f"**{category.capitalize()}** — ₹{format_inr(category_amount)}")
         display_df = top5[TOPSIS_TABLE_COLS].rename(columns=TOPSIS_COL_RENAME)
+        display_df["Amount (₹)"] = display_df["Amount (₹)"].apply(format_inr)
         st.dataframe(display_df, hide_index=True, use_container_width=True)
