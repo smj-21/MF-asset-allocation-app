@@ -127,6 +127,129 @@ institutional portfolio construction.
     with col_image:
         st.image("assets/workflow.png", use_container_width=True)
 
+with st.expander("📚 Understanding the parameters to judge MF"):
+    st.markdown(
+        """
+### Understanding the Parameters to Judge Mutual Funds
+
+Every fund shown in this tool is described by six numbers. Here's what each one actually
+means, how it's calculated, what range is considered healthy, and how to use it when
+judging a fund yourself — even outside this tool.
+
+---
+
+**1. AUM — Assets Under Management (₹ Crore)**
+- **What it is**: the total market value of all the money a fund currently manages —
+  every investor's contribution combined.
+- **Formula**: sum of the current market value of all the fund's holdings + any cash it holds.
+- **Why it matters**: a reasonable AUM signals investor trust and gives the fund enough
+  scale to operate efficiently. But size cuts both ways depending on category.
+- **What's a healthy range**:
+  - Largecap / Flexicap: size matters less — even ₹50,000+ Cr funds can move in and out of large stocks easily.
+  - Midcap / Smallcap: very large AUM (₹30,000+ Cr in Smallcap) can actually hurt performance — the fund manager struggles to buy/sell meaningfully-sized stakes in smaller companies without moving the stock price.
+  - As a floor: generally avoid funds below ₹500–1,000 Cr AUM regardless of category — too small can mean higher costs per investor and, rarely, a risk of the fund being shut down or merged.
+- **Used in this tool**: only for the initial top-10 shortlist per category — it's deliberately left out of the TOPSIS ranking itself to avoid double-counting the same signal twice.
+
+---
+
+**2. 1-Year Return (%)**
+- **What it is**: how much the fund's NAV (Net Asset Value, i.e. its price per unit) has
+  grown over the trailing 12 months.
+- **Formula**: `(NAV today ÷ NAV 1 year ago − 1) × 100`
+- **Why it matters**: shows recent momentum — useful, but noisy. A single strong or weak
+  year is often driven by short-term market cycles, not fund manager skill.
+- **What's a healthy range**: highly dependent on the market that year — equity categories
+  can range anywhere from -10% to +40% in a single year. The number itself matters less
+  than how it compares to the category average and its benchmark index over the same period.
+- **Beginner tip**: don't chase the fund with the highest 1-year return alone — that's
+  "recency bias." A fund at the top of the 1-year list is often near the bottom the
+  following year.
+
+---
+
+**3. 3-Year Return / CAGR (%)**
+- **What it is**: the fund's *annualized* growth rate over the last 3 years — smooths out
+  single-year noise and reflects performance across more of a market cycle.
+- **Formula**: `((NAV today ÷ NAV 3 years ago) ^ (1/3) − 1) × 100`
+- **Why it matters**: consistency over multiple years is a much stronger signal of
+  genuine fund quality than any single year's number.
+- **What's a healthy range**: Indian equity markets have historically compounded at
+  roughly 10–15% CAGR over long periods — a fund consistently near or above its
+  category average over 3 years is a good sign.
+- **Beginner tip**: always look at 3-year (or longer) returns alongside 1-year — a fund
+  that's merely "average" over 3 years but had one spectacular recent year is riskier
+  than it looks.
+
+---
+
+**4. Volatility / Standard Deviation (%)**
+- **What it is**: how much the fund's returns swing above and below its own average —
+  a pure measure of risk, independent of whether the returns were good or bad.
+- **Formula**: standard deviation of periodic (daily/weekly) returns, annualized by
+  multiplying by the square root of the number of periods in a year (√252 for daily, √52
+  for weekly).
+- **Why it matters**: higher volatility means bigger ups *and* downs — more suited to
+  investors with a longer time horizon who can stomach short-term drops.
+- **What's a healthy range** (broad guide, varies by market conditions):
+  - Largecap: ~12–16%
+  - Midcap: ~16–20%
+  - Smallcap: ~20–26%
+  - Gold: ~12–15%
+  - Bank FD: ~0% (fixed, guaranteed — that's the whole point of it in this tool's allocation)
+- **Beginner tip**: lower volatility isn't automatically "better" — it depends on your
+  risk profile. A Risk Averse investor should prefer the lower end of a category's
+  volatility range; an Aggressive investor may accept the higher end for higher
+  return potential.
+
+---
+
+**5. Sharpe Ratio**
+- **What it is**: possibly the single most useful number here — it measures *return per
+  unit of risk taken*, not just raw return.
+- **Formula**: `(Fund Return − Risk-Free Rate) ÷ Fund's Standard Deviation`
+  (this tool uses the prevailing Bank FD rate, 6.5%, as the risk-free rate).
+- **Why it matters**: a fund with a high raw return but a low Sharpe ratio is likely
+  taking on excessive risk to get there — the return isn't "efficient." A fund with a
+  slightly lower return but a higher Sharpe ratio is often the smarter pick.
+- **What's a healthy range**:
+  - Below 0: poor — the fund didn't even beat a risk-free FD after accounting for its risk
+  - 0 to 1: acceptable, fairly typical
+  - 1 to 2: good — strong risk-adjusted performance
+  - Above 2: excellent — rare, and worth checking it's sustained, not a one-off
+- **Beginner tip**: when comparing two similar funds, all else equal, prefer the one with
+  the higher Sharpe ratio over the one with the higher raw return.
+
+---
+
+**6. Expense Ratio (%)**
+- **What it is**: the annual fee the fund house charges to manage your money — deducted
+  automatically and gradually from the fund's NAV, so you never see it as a separate
+  charge, but you pay it every single year regardless of how the fund performs.
+- **Formula**: `(Total annual fund operating costs ÷ Total fund assets) × 100`
+- **Why it matters**: this is the one factor entirely within a fund's control (unlike
+  market returns) and it compounds against you every year — a 1% difference in expense
+  ratio can cost you a meaningful chunk of your final corpus over 20–30 years.
+- **What's a healthy range** (Direct plans, which is what this tool uses — Direct plans
+  skip the distributor commission that Regular plans carry, so they're always cheaper):
+  - Index funds: ~0.2–0.3%
+  - Largecap / Flexicap active funds: ~0.5–1.0%
+  - Midcap / Smallcap active funds: ~0.5–1.3%
+  - Gold ETFs: ~0.4–0.65%
+- **Beginner tip**: lower is generally better, all else equal — but don't pick a fund
+  *purely* because it's cheap. A slightly pricier fund with meaningfully better
+  risk-adjusted (Sharpe) performance is usually still the better choice.
+
+---
+
+**Why the tool weighs these together instead of picking just one**: no single number
+tells the full story — a fund can look great on returns while quietly taking on huge
+risk, or look "safe" on volatility while charging fees that erode your gains over time.
+That's exactly why TOPSIS (see the methodology section after running the ranking) scores
+funds across all five criteria at once, weighted according to how much each one should
+matter for *your* risk profile.
+        """
+    )
+
 st.markdown(
     """
     <style>
