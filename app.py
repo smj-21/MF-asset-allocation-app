@@ -87,7 +87,7 @@ if "step" not in st.session_state:
 st.title("📊 Guided Asset Allocation Tool")
 st.caption("Risk-profile-driven shortlisting of mutual fund, FD and ETF allocation based on TOPSIS ranking")
 
-with st.expander("👉 Click here to understand how this app works"):
+with st.expander("Click here to understand how this app works"):
     col_text, col_image = st.columns([2, 1])
     with col_text:
         st.markdown(
@@ -122,12 +122,20 @@ institutional portfolio construction.
 - Results are visualized through interactive charts and tables
 - A downloadable Excel file lays out the full TOPSIS calculation — scores, normalization, and a written explanation of why each criterion was weighted the way it was for your risk profile
 - Nothing is a black box
+
+**Step 5 — Future Value Projection**
+- Once your funds are ranked and your rupee amounts are finalized, you can enter an investment time horizon (in years and months) and click Calculate to see where that money could grow to
+- Each mutual fund is projected forward using its own historical 3-Year CAGR — a smoother, more stable assumption than relying on a single noisy 1-year return
+- Bank FD is projected separately at a fixed 7.5% p.a., in line with typical current 3-year FD rates
+- The formula used for every fund is straightforward compounding: Future Value = Amount Invested × (1 + Annual Rate) ^ Duration in Years
+- The output shows: the future value of each individual fund in a table, the total future value across your whole portfolio, the overall CAGR (calculated backward from your total invested amount and total future value), and your total projected profit or loss
+- This is a projection based on historical performance, not a guarantee — actual future returns can and will differ
             """
         )
     with col_image:
         st.image("assets/workflow.png", use_container_width=True)
 
-with st.expander("📚 Understanding the parameters to judge MF"):
+with st.expander("Understanding the parameters to judge MF"):
     st.markdown(
         """
 ### Understanding the Parameters to Judge Mutual Funds
