@@ -1,6 +1,5 @@
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
 from engine.allocation import GUARDRAILS, RISK_PROFILE_LABELS, get_allocation
@@ -257,42 +256,35 @@ elif st.session_state.step == "topsis":
 
     st.subheader(f"Step 4 — Top 5 Ranked Funds ({RISK_PROFILE_LABELS[risk_profile]})")
 
-    # Stacked bar: one bar per category, split into 5 segments (one per
-    # ranked fund), segment height = that fund's allocated rupee amount.
-    fig_stack = go.Figure()
-    for rank in range(1, 6):
-        seg_amounts = []
-        seg_labels = []
-        for category in CATEGORIES:
-            top5 = topsis_results[category]
-            row = top5[top5["topsis_rank"] == rank]
-            if not row.empty:
-                fund_amount = float(row["fund_amount"].iloc[0])
-                fund_name = row["fund_name"].iloc[0]
-                seg_amounts.append(fund_amount)
-                seg_labels.append(f"{fund_name.upper()}<br>₹{fund_amount:,.0f}")
-            else:
-                seg_amounts.append(0.0)
-                seg_labels.append("")
+    # Treemap: Category > Fund, box size = allocated amount, colored by rank.
+    # Handles very uneven category totals (e.g. Gold vs Largecap) without the
+    # label-crowding a stacked bar gets when segments are small.
+    treemap_rows = []
+    for category in CATEGORIES:
+        top5 = topsis_results[category]
+        for _, row in top5.iterrows():
+            treemap_rows.append({
+                "Category": category.upper(),
+                "Fund": row["fund_name"].upper(),
+                "Amount": float(row["fund_amount"]),
+                "Rank": f"Rank {int(row['topsis_rank'])}",
+            })
+    treemap_df = pd.DataFrame(treemap_rows)
 
-        fig_stack.add_bar(
-            x=[c.upper() for c in CATEGORIES],
-            y=seg_amounts,
-            name=f"Rank {rank}",
-            text=seg_labels,
-            textposition="inside",
-            marker_color=RANK_COLORS[rank - 1],
-            hovertemplate="%{x}<br>%{text}<extra>RANK %{fullData.name}</extra>",
-        )
-
-    fig_stack.update_layout(
-        barmode="stack",
-        xaxis_title="CATEGORY",
-        yaxis_title="AMOUNT (₹)",
-        legend_title="RANK",
-        margin=dict(t=10, b=10, l=10, r=10),
+    fig_tree = px.treemap(
+        treemap_df,
+        path=["Category", "Fund"],
+        values="Amount",
+        color="Rank",
+        color_discrete_map={f"Rank {i}": RANK_COLORS[i - 1] for i in range(1, 6)},
     )
-    st.plotly_chart(fig_stack, use_container_width=True)
+    fig_tree.update_traces(
+        texttemplate="%{label}<br>₹%{value:,.0f}",
+        textfont_size=13,
+        hovertemplate="%{label}<br>₹%{value:,.2f}<extra></extra>",
+    )
+    fig_tree.update_layout(margin=dict(t=10, b=10, l=10, r=10))
+    st.plotly_chart(fig_tree, use_container_width=True)
 
     for category in CATEGORIES:
         top5 = topsis_results[category]
