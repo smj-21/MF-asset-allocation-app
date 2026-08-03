@@ -271,6 +271,20 @@ elif st.session_state.step == "topsis":
 
     st.subheader(f"Step 4 — Top 5 Ranked Funds ({RISK_PROFILE_LABELS[risk_profile]})")
 
+    excel_bytes = build_topsis_excel_bytes(topsis_results, risk_profile, criteria)
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.download_button(
+            "📥 Download TOPSIS Excel Report",
+            data=excel_bytes,
+            file_name="topsis_model.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+    with col_b:
+        st.button("🔄 Start Over", on_click=reset_app, use_container_width=True, type="primary")
+
     # Treemap: Category > Fund, box size = allocated amount, colored by rank.
     # Handles very uneven category totals (e.g. Gold vs Largecap) without the
     # label-crowding a stacked bar gets when segments are small.
@@ -330,17 +344,3 @@ elif st.session_state.step == "topsis":
         st.markdown("**Weights used for this risk profile:**")
         for crit, details in criteria.items():
             st.write(f"- {crit}: {details['weight']*100:.0f}% ({details['type']})")
-
-    excel_bytes = build_topsis_excel_bytes(topsis_results, risk_profile, criteria)
-
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.download_button(
-            "📥 Download TOPSIS Excel Report",
-            data=excel_bytes,
-            file_name="topsis_model.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-    with col_b:
-        st.button("🔄 Start Over", on_click=reset_app, use_container_width=True, type="primary")
