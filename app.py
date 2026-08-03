@@ -14,8 +14,8 @@ FUND_TABLE_COLS = [
     "volatility", "sharpe_ratio", "expense_ratio",
 ]
 TOPSIS_TABLE_COLS = [
-    "topsis_rank", "fund_name", "return_1y_calc", "return_3y_calc",
-    "volatility", "sharpe_ratio", "expense_ratio", "topsis_score", "fund_amount",
+    "topsis_rank", "fund_name", "fund_amount", "return_1y_calc", "return_3y_calc",
+    "volatility", "sharpe_ratio", "expense_ratio", "topsis_score",
 ]
 TOPSIS_COL_RENAME = {
     "topsis_rank": "Rank",
