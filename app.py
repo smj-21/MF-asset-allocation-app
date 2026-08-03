@@ -35,6 +35,18 @@ PIE_COLORS = ["#118AB2", "#06D6A0", "#FFD166", "#EF476F", "#7209B7", "#073B4C"]
 # a single-hue gradient reads as more coherent than 5 unrelated colors.
 RANK_COLORS = px.colors.sample_colorscale("Blues_r", [i / 4 for i in range(5)])
 
+
+def _contrasting_text_color(rgb_string):
+    """Pick black or white text depending on how light/dark the background is,
+    so labels stay readable across the whole gradient (white text disappears
+    on the lightest shade, black text disappears on the darkest)."""
+    r, g, b = [float(v) for v in rgb_string.strip("rgb()").split(",")]
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return "black" if luminance > 150 else "white"
+
+
+RANK_TEXT_COLORS = [_contrasting_text_color(c) for c in RANK_COLORS]
+
 st.set_page_config(page_title="Guided Asset Allocation Tool", page_icon="📊", layout="wide")
 
 
@@ -275,7 +287,7 @@ elif st.session_state.step == "topsis":
                 fund_amount = float(row["fund_amount"].iloc[0])
                 fund_name = row["fund_name"].iloc[0]
                 seg_amounts.append(fund_amount)
-                seg_labels.append(f"{fund_name.upper()}<br>₹{fund_amount:,.0f}")
+                seg_labels.append(f"<b>{fund_name.upper()}</b><br><b>₹{fund_amount:,.0f}</b>")
             else:
                 seg_amounts.append(0.0)
                 seg_labels.append("")
@@ -286,7 +298,7 @@ elif st.session_state.step == "topsis":
             name=f"Rank {rank}",
             text=seg_labels,
             textposition="inside",
-            insidetextfont=dict(color="white", size=12),
+            insidetextfont=dict(color=RANK_TEXT_COLORS[rank - 1], size=12),
             marker=dict(color=RANK_COLORS[rank - 1], line=dict(width=1, color="#0E1117")),
             hovertemplate="%{x}<br>%{text}<extra>RANK %{fullData.name}</extra>",
         )
