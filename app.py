@@ -520,55 +520,63 @@ elif st.session_state.step == "topsis":
     with col_dur2:
         duration_months_input = st.number_input("Months", min_value=0, max_value=11, value=0, step=1)
 
-    total_duration_years = duration_years_input + duration_months_input / 12
+    if st.button("📈 Calculate", type="primary"):
+        st.session_state.fv_duration_years = duration_years_input
+        st.session_state.fv_duration_months = duration_months_input
+        st.session_state.fv_calculated = True
 
-    if total_duration_years <= 0:
-        st.warning("Enter a duration greater than 0 to see the projection.")
-    else:
-        fv_rows = []
-        total_fv = 0.0
-
-        for category in CATEGORIES:
-            top5 = topsis_results[category]
-            for _, row in top5.iterrows():
-                invested = float(row["fund_amount"])
-                annual_rate = float(row["return_3y_calc"]) / 100
-                fv = invested * (1 + annual_rate) ** total_duration_years
-                fv_rows.append({
-                    "Category": category.capitalize(),
-                    "Fund Name": row["fund_name"],
-                    "Assumed Return (3Y CAGR %)": round(row["return_3y_calc"], 2),
-                    "Amount Invested (₹)": invested,
-                    "Future Value (₹)": fv,
-                })
-                total_fv += fv
-
-        fd_amount = allocation["fd"] * amount
-        fd_fv = fd_amount * (1 + FD_PROJECTION_RATE) ** total_duration_years
-        fv_rows.append({
-            "Category": "Bank FD",
-            "Fund Name": "Bank Fixed Deposit",
-            "Assumed Return (3Y CAGR %)": FD_PROJECTION_RATE * 100,
-            "Amount Invested (₹)": fd_amount,
-            "Future Value (₹)": fd_fv,
-        })
-        total_fv += fd_fv
-
-        fv_df = pd.DataFrame(fv_rows)
-        fv_display_df = fv_df.copy()
-        fv_display_df["Amount Invested (₹)"] = fv_display_df["Amount Invested (₹)"].apply(format_inr)
-        fv_display_df["Future Value (₹)"] = fv_display_df["Future Value (₹)"].apply(format_inr)
-        st.dataframe(fv_display_df, hide_index=True, use_container_width=True)
-
-        total_profit = total_fv - amount
-        total_cagr = ((total_fv / amount) ** (1 / total_duration_years) - 1) * 100
-
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Amount Invested", f"₹{format_inr(amount)}")
-        m2.metric("Total Future Value", f"₹{format_inr(total_fv)}")
-        m3.metric("Overall CAGR", f"{total_cagr:.2f}%")
-        m4.metric(
-            "Total Profit / Loss",
-            f"₹{format_inr(total_profit)}",
-            delta=f"{(total_profit / amount) * 100:.2f}%",
+    if st.session_state.get("fv_calculated"):
+        total_duration_years = (
+            st.session_state.fv_duration_years + st.session_state.fv_duration_months / 12
         )
+
+        if total_duration_years <= 0:
+            st.warning("Enter a duration greater than 0 to see the projection.")
+        else:
+            fv_rows = []
+            total_fv = 0.0
+
+            for category in CATEGORIES:
+                top5 = topsis_results[category]
+                for _, row in top5.iterrows():
+                    invested = float(row["fund_amount"])
+                    annual_rate = float(row["return_3y_calc"]) / 100
+                    fv = invested * (1 + annual_rate) ** total_duration_years
+                    fv_rows.append({
+                        "Category": category.capitalize(),
+                        "Fund Name": row["fund_name"],
+                        "Assumed Return (3Y CAGR %)": round(row["return_3y_calc"], 2),
+                        "Amount Invested (₹)": invested,
+                        "Future Value (₹)": fv,
+                    })
+                    total_fv += fv
+
+            fd_amount = allocation["fd"] * amount
+            fd_fv = fd_amount * (1 + FD_PROJECTION_RATE) ** total_duration_years
+            fv_rows.append({
+                "Category": "Bank FD",
+                "Fund Name": "Bank Fixed Deposit",
+                "Assumed Return (3Y CAGR %)": FD_PROJECTION_RATE * 100,
+                "Amount Invested (₹)": fd_amount,
+                "Future Value (₹)": fd_fv,
+            })
+            total_fv += fd_fv
+
+            fv_df = pd.DataFrame(fv_rows)
+            fv_display_df = fv_df.copy()
+            fv_display_df["Amount Invested (₹)"] = fv_display_df["Amount Invested (₹)"].apply(format_inr)
+            fv_display_df["Future Value (₹)"] = fv_display_df["Future Value (₹)"].apply(format_inr)
+            st.dataframe(fv_display_df, hide_index=True, use_container_width=True)
+
+            total_profit = total_fv - amount
+            total_cagr = ((total_fv / amount) ** (1 / total_duration_years) - 1) * 100
+
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Amount Invested", f"₹{format_inr(amount)}")
+            m2.metric("Total Future Value", f"₹{format_inr(total_fv)}")
+            m3.metric("Overall CAGR", f"{total_cagr:.2f}%")
+            m4.metric(
+                "Total Profit / Loss",
+                f"₹{format_inr(total_profit)}",
+                delta=f"{(total_profit / amount) * 100:.2f}%",
+            )
