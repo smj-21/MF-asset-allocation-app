@@ -30,7 +30,6 @@ TOPSIS_COL_RENAME = {
 
 # Category order here matches allocation.index (5 market categories + fd)
 PIE_COLORS = ["#118AB2", "#06D6A0", "#FFD166", "#EF476F", "#7209B7", "#073B4C"]
-RANK_COLORS = ["#4CC9F0", "#4361EE", "#7209B7", "#F72585", "#F77F00"]
 
 st.set_page_config(page_title="Guided Asset Allocation Tool", page_icon="📊", layout="wide")
 
@@ -263,11 +262,12 @@ elif st.session_state.step == "topsis":
     for category in CATEGORIES:
         top5 = topsis_results[category]
         for _, row in top5.iterrows():
+            rank = int(row["topsis_rank"])
             treemap_rows.append({
                 "Category": category.upper(),
-                "Fund": row["fund_name"].upper(),
+                "Fund": f"{row['fund_name'].upper()} (RANK {rank})",
                 "Amount": float(row["fund_amount"]),
-                "Rank": f"Rank {int(row['topsis_rank'])}",
+                "Rank": rank,
             })
     treemap_df = pd.DataFrame(treemap_rows)
 
@@ -276,14 +276,16 @@ elif st.session_state.step == "topsis":
         path=["Category", "Fund"],
         values="Amount",
         color="Rank",
-        color_discrete_map={f"Rank {i}": RANK_COLORS[i - 1] for i in range(1, 6)},
+        color_continuous_scale="Blues_r",  # rank 1 (best) = darkest/most prominent
+        range_color=[1, 5],
     )
     fig_tree.update_traces(
         texttemplate="%{label}<br>₹%{value:,.0f}",
-        textfont_size=13,
+        textfont=dict(size=13, color="white"),
         hovertemplate="%{label}<br>₹%{value:,.2f}<extra></extra>",
+        marker=dict(line=dict(width=1.5, color="#0E1117")),
     )
-    fig_tree.update_layout(margin=dict(t=10, b=10, l=10, r=10))
+    fig_tree.update_layout(margin=dict(t=10, b=10, l=10, r=10), coloraxis_showscale=False)
     st.plotly_chart(fig_tree, use_container_width=True)
 
     for category in CATEGORIES:
