@@ -111,16 +111,6 @@ st.markdown(
         padding: 0.9em 2.2em !important;
         border-radius: 10px !important;
     }
-    .st-key-start_over_btn button {
-        background-color: #ffb3b3 !important;
-        color: #7a0000 !important;
-        border: 1px solid #ff8080 !important;
-    }
-    .st-key-start_over_btn button:hover {
-        background-color: #ff9999 !important;
-        border-color: #ff6666 !important;
-        color: #5a0000 !important;
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -247,8 +237,7 @@ elif st.session_state.step == "done_no_topsis":
         cat_df = final_df[final_df["category"] == category][FUND_TABLE_COLS]
         st.dataframe(cat_df, hide_index=True, use_container_width=True)
 
-    with st.container(key="start_over_btn"):
-        st.button("🔄 Start Over", on_click=reset_app, use_container_width=True, type="primary")
+    st.button("🔄 Start Over", on_click=reset_app, use_container_width=True, type="primary")
 
 # ============================================================
 # STEP 3b: TOPSIS ranking + Excel export
@@ -294,8 +283,7 @@ elif st.session_state.step == "topsis":
             use_container_width=True,
         )
     with col_b:
-        with st.container(key="start_over_btn"):
-            st.button("🔄 Start Over", on_click=reset_app, use_container_width=True, type="primary")
+        st.button("🔄 Start Over", on_click=reset_app, use_container_width=True, type="primary")
 
     from engine.topsis import GENERAL_METHODOLOGY, PROFILE_REASONING
 
