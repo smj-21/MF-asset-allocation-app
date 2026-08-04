@@ -51,182 +51,150 @@ RANK_TEXT_COLORS = [_contrasting_text_color(c) for c in RANK_COLORS]
 # Original endless-runner "jump the obstacle" game (own canvas art, not Google's
 # assets/code) — shown while fund data loads. Runs entirely client-side in the
 # browser, so it stays playable even while the Python backend is busy fetching.
-DINO_GAME_HTML = """
+SNAKE_GAME_HTML = """
 <div style="text-align:center; font-family:'Courier New', monospace;">
-  <canvas id="runnerCanvas" width="600" height="200"
-    style="background:#f7f7f7; border:2px solid #535353; border-radius:6px; max-width:100%;"></canvas>
-  <p style="color:#535353; font-size:13px; margin-top:6px;">
-    Press SPACE / UP or tap the game to jump. Press again to restart after Game Over.
+  <canvas id="snakeCanvas" width="400" height="400"
+    style="background:#f7f7f7; border:2px solid #535353; border-radius:6px; max-width:100%; touch-action:none;"></canvas>
+  <p style="color:#535353; font-size:13px; margin:6px 0;">
+    Arrow keys (desktop) or the buttons below (mobile) to steer. Tap/press any direction to start or restart.
   </p>
+  <div style="display:inline-grid; grid-template-columns:44px 44px 44px; grid-template-rows:44px 44px 44px; gap:4px; user-select:none;">
+    <div></div>
+    <button id="btnUp" style="font-size:18px;">&#9650;</button>
+    <div></div>
+    <button id="btnLeft" style="font-size:18px;">&#9664;</button>
+    <div></div>
+    <button id="btnRight" style="font-size:18px;">&#9654;</button>
+    <div></div>
+    <button id="btnDown" style="font-size:18px;">&#9660;</button>
+    <div></div>
+  </div>
 </div>
 <script>
 (function() {
-  const canvas = document.getElementById("runnerCanvas");
+  const canvas = document.getElementById("snakeCanvas");
   const ctx = canvas.getContext("2d");
-  const groundY = 150;
+  const gridSize = 20;
+  const cols = canvas.width / gridSize;
+  const rows = canvas.height / gridSize;
+  const tickMs = 130;
 
-  let runner = { x: 50, y: groundY - 44, width: 46, height: 44, vy: 0, jumping: false };
-  const gravity = 1.3;
-  const jumpStrength = -15;
+  let snake, dir, nextDir, food, score, gameOver, started, lastTick;
 
-  let obstacles = [];
-  let frame = 0;
-  let score = 0;
-  let speed = 3.2;
-  let gameOver = false;
-  let started = false;
-
-  function resetGame() {
-    runner.y = groundY - runner.height;
-    runner.vy = 0;
-    runner.jumping = false;
-    obstacles = [];
-    frame = 0;
+  function reset() {
+    snake = [{ x: 8, y: 10 }, { x: 7, y: 10 }, { x: 6, y: 10 }];
+    dir = { x: 1, y: 0 };
+    nextDir = { x: 1, y: 0 };
     score = 0;
-    speed = 3.2;
     gameOver = false;
     started = true;
+    placeFood();
+    lastTick = performance.now();
   }
 
-  function spawnObstacle() {
-    const h = 26 + Math.random() * 20;
-    obstacles.push({ x: canvas.width, y: groundY - h, width: 18, height: h });
+  function placeFood() {
+    let valid = false;
+    while (!valid) {
+      food = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+      valid = !snake.some(s => s.x === food.x && s.y === food.y);
+    }
+  }
+
+  function setDirection(x, y) {
+    if (!started || gameOver) {
+      reset();
+      return;
+    }
+    // Prevent reversing directly into itself
+    if (dir.x === -x && dir.y === -y) return;
+    nextDir = { x, y };
   }
 
   function update() {
     if (!started || gameOver) return;
-    frame++;
+    dir = nextDir;
 
-    runner.vy += gravity;
-    runner.y += runner.vy;
-    if (runner.y > groundY - runner.height) {
-      runner.y = groundY - runner.height;
-      runner.vy = 0;
-      runner.jumping = false;
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    if (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows ||
+        snake.some(s => s.x === head.x && s.y === head.y)) {
+      gameOver = true;
+      return;
     }
 
-    if (frame % Math.max(55, 100 - Math.floor(speed * 4)) === 0) {
-      spawnObstacle();
-    }
-
-    obstacles.forEach(o => o.x -= speed);
-    obstacles = obstacles.filter(o => o.x + o.width > 0);
-
-    for (const o of obstacles) {
-      if (runner.x + 6 < o.x + o.width && runner.x + runner.width - 6 > o.x &&
-          runner.y + 4 < o.y + o.height && runner.y + runner.height > o.y) {
-        gameOver = true;
-      }
-    }
-
-    score++;
-    if (score % 500 === 0) speed += 0.3;
-  }
-
-  // Original T-Rex-style silhouette (own art, drawn from primitive shapes —
-  // not a reproduction of any existing game's sprite/assets).
-  function drawTRex(x, bottomY, jumping, legPhase) {
-    const c = "#2E5339"; // dino body color
-    ctx.fillStyle = c;
-
-    // Tail (triangle, back-left)
-    ctx.beginPath();
-    ctx.moveTo(x, bottomY - 20);
-    ctx.lineTo(x - 12, bottomY - 26);
-    ctx.lineTo(x, bottomY - 30);
-    ctx.closePath();
-    ctx.fill();
-
-    // Torso
-    ctx.fillRect(x, bottomY - 34, 24, 22);
-
-    // Neck + head block
-    ctx.fillRect(x + 16, bottomY - 46, 20, 20);
-    // Snout
-    ctx.fillRect(x + 32, bottomY - 38, 12, 10);
-
-    // Small arm
-    ctx.fillRect(x + 18, bottomY - 24, 5, 8);
-
-    // Eye
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(x + 30, bottomY - 42, 5, 5);
-    ctx.fillStyle = "#111111";
-    ctx.fillRect(x + 32, bottomY - 41, 2, 2);
-
-    // Legs (animated when running, static split when jumping)
-    ctx.fillStyle = c;
-    if (jumping) {
-      ctx.fillRect(x + 4, bottomY - 12, 7, 12);
-      ctx.fillRect(x + 15, bottomY - 12, 7, 12);
-    } else if (legPhase) {
-      ctx.fillRect(x + 3, bottomY - 12, 7, 12);
-      ctx.fillRect(x + 16, bottomY - 8, 7, 8);
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      placeFood();
     } else {
-      ctx.fillRect(x + 3, bottomY - 8, 7, 8);
-      ctx.fillRect(x + 16, bottomY - 12, 7, 12);
+      snake.pop();
     }
   }
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = "#535353";
-    ctx.beginPath();
-    ctx.moveTo(0, groundY);
-    ctx.lineTo(canvas.width, groundY);
-    ctx.stroke();
+    // Food
+    ctx.fillStyle = "#EF476F";
+    ctx.fillRect(food.x * gridSize + 2, food.y * gridSize + 2, gridSize - 4, gridSize - 4);
 
-    const legPhase = Math.floor(frame / 8) % 2 === 0;
-    drawTRex(runner.x, runner.y + runner.height, runner.jumping, legPhase);
-
-    // Obstacles (simple cactus look — a stem with two side spikes)
-    ctx.fillStyle = "#06D6A0";
-    obstacles.forEach(o => {
-      ctx.fillRect(o.x + o.width / 2 - 3, o.y, 6, o.height);
-      ctx.fillRect(o.x, o.y + o.height * 0.3, o.width / 2 - 2, 5);
-      ctx.fillRect(o.x + o.width / 2 + 2, o.y + o.height * 0.5, o.width / 2 - 2, 5);
+    // Snake
+    snake.forEach((s, i) => {
+      ctx.fillStyle = i === 0 ? "#06D6A0" : "#118AB2";
+      ctx.fillRect(s.x * gridSize + 1, s.y * gridSize + 1, gridSize - 2, gridSize - 2);
     });
 
     ctx.fillStyle = "#535353";
     ctx.font = "16px monospace";
-    ctx.fillText("Score: " + Math.floor(score / 10), canvas.width - 120, 20);
+    ctx.fillText("Score: " + score, 10, 20);
 
     if (!started) {
-      ctx.fillText("Press SPACE or tap to start", canvas.width / 2 - 110, canvas.height / 2);
+      ctx.fillText("Press a direction to start", canvas.width / 2 - 100, canvas.height / 2);
     } else if (gameOver) {
-      ctx.fillText("GAME OVER — press SPACE to restart", canvas.width / 2 - 150, canvas.height / 2);
+      ctx.fillText("GAME OVER — press a direction to restart", canvas.width / 2 - 155, canvas.height / 2);
     }
   }
 
-  function loop() {
-    update();
+  function loop(now) {
+    if (now - lastTick >= tickMs) {
+      update();
+      lastTick = now;
+    }
     draw();
     requestAnimationFrame(loop);
   }
 
-  function jump() {
-    if (!started || gameOver) {
-      resetGame();
-      return;
-    }
-    if (!runner.jumping) {
-      runner.vy = jumpStrength;
-      runner.jumping = true;
-    }
-  }
-
   document.addEventListener("keydown", function(e) {
-    if (e.code === "Space" || e.code === "ArrowUp") {
+    const map = {
+      ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+    };
+    if (map[e.code]) {
       e.preventDefault();
-      jump();
+      setDirection(map[e.code][0], map[e.code][1]);
+    } else if (e.code === "Space" && (!started || gameOver)) {
+      reset();
     }
   });
-  canvas.addEventListener("mousedown", jump);
-  canvas.addEventListener("touchstart", function(e) { e.preventDefault(); jump(); });
 
+  function bindButton(id, x, y) {
+    const el = document.getElementById(id);
+    const handler = function(e) { e.preventDefault(); setDirection(x, y); };
+    el.addEventListener("click", handler);
+    el.addEventListener("touchstart", handler);
+  }
+  bindButton("btnUp", 0, -1);
+  bindButton("btnDown", 0, 1);
+  bindButton("btnLeft", -1, 0);
+  bindButton("btnRight", 1, 0);
+
+  started = false;
+  gameOver = false;
+  snake = [{ x: 8, y: 10 }, { x: 7, y: 10 }, { x: 6, y: 10 }];
+  food = { x: 14, y: 10 };
+  score = 0;
   draw();
-  loop();
+  lastTick = performance.now();
+  requestAnimationFrame(loop);
 })();
 </script>
 """
@@ -526,7 +494,7 @@ elif st.session_state.step == "allocation":
 
     if "final_df" not in st.session_state:
         with st.expander("Click here to play a game while the data loads"):
-            components.html(DINO_GAME_HTML, height=260)
+            components.html(SNAKE_GAME_HTML, height=560)
 
         progress_bar = st.progress(0.0, text="Starting fund data fetch...")
 
