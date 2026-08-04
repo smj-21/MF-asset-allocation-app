@@ -2,6 +2,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 from engine.allocation import GUARDRAILS, RISK_PROFILE_LABELS, get_allocation
 from engine.fund_data import fetch_all_fund_data
@@ -46,6 +47,142 @@ def _contrasting_text_color(rgb_string):
 
 
 RANK_TEXT_COLORS = [_contrasting_text_color(c) for c in RANK_COLORS]
+
+# Original endless-runner "jump the obstacle" game (own canvas art, not Google's
+# assets/code) — shown while fund data loads. Runs entirely client-side in the
+# browser, so it stays playable even while the Python backend is busy fetching.
+DINO_GAME_HTML = """
+<div style="text-align:center; font-family:'Courier New', monospace;">
+  <canvas id="runnerCanvas" width="600" height="200"
+    style="background:#f7f7f7; border:2px solid #535353; border-radius:6px; max-width:100%;"></canvas>
+  <p style="color:#535353; font-size:13px; margin-top:6px;">
+    Press SPACE / UP or tap the game to jump. Press again to restart after Game Over.
+  </p>
+</div>
+<script>
+(function() {
+  const canvas = document.getElementById("runnerCanvas");
+  const ctx = canvas.getContext("2d");
+  const groundY = 150;
+
+  let runner = { x: 50, y: groundY - 40, width: 34, height: 40, vy: 0, jumping: false };
+  const gravity = 1.5;
+  const jumpStrength = -18;
+
+  let obstacles = [];
+  let frame = 0;
+  let score = 0;
+  let speed = 6;
+  let gameOver = false;
+  let started = false;
+
+  function resetGame() {
+    runner.y = groundY - runner.height;
+    runner.vy = 0;
+    runner.jumping = false;
+    obstacles = [];
+    frame = 0;
+    score = 0;
+    speed = 6;
+    gameOver = false;
+    started = true;
+  }
+
+  function spawnObstacle() {
+    const h = 28 + Math.random() * 22;
+    obstacles.push({ x: canvas.width, y: groundY - h, width: 18, height: h });
+  }
+
+  function update() {
+    if (!started || gameOver) return;
+    frame++;
+
+    runner.vy += gravity;
+    runner.y += runner.vy;
+    if (runner.y > groundY - runner.height) {
+      runner.y = groundY - runner.height;
+      runner.vy = 0;
+      runner.jumping = false;
+    }
+
+    if (frame % Math.max(38, 90 - Math.floor(speed * 2)) === 0) {
+      spawnObstacle();
+    }
+
+    obstacles.forEach(o => o.x -= speed);
+    obstacles = obstacles.filter(o => o.x + o.width > 0);
+
+    for (const o of obstacles) {
+      if (runner.x < o.x + o.width && runner.x + runner.width > o.x &&
+          runner.y < o.y + o.height && runner.y + runner.height > o.y) {
+        gameOver = true;
+      }
+    }
+
+    score++;
+    if (score % 300 === 0) speed += 0.5;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = "#535353";
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(canvas.width, groundY);
+    ctx.stroke();
+
+    // Runner (simple silhouette, own art — not Chrome's dino sprite)
+    ctx.fillStyle = "#118AB2";
+    ctx.fillRect(runner.x, runner.y, runner.width, runner.height);
+    ctx.fillRect(runner.x + runner.width - 10, runner.y - 8, 14, 12);
+
+    // Obstacles
+    ctx.fillStyle = "#06D6A0";
+    obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.width, o.height));
+
+    ctx.fillStyle = "#535353";
+    ctx.font = "16px monospace";
+    ctx.fillText("Score: " + Math.floor(score / 10), canvas.width - 120, 20);
+
+    if (!started) {
+      ctx.fillText("Press SPACE or tap to start", canvas.width / 2 - 110, canvas.height / 2);
+    } else if (gameOver) {
+      ctx.fillText("GAME OVER — press SPACE to restart", canvas.width / 2 - 150, canvas.height / 2);
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  function jump() {
+    if (!started || gameOver) {
+      resetGame();
+      return;
+    }
+    if (!runner.jumping) {
+      runner.vy = jumpStrength;
+      runner.jumping = true;
+    }
+  }
+
+  document.addEventListener("keydown", function(e) {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+      e.preventDefault();
+      jump();
+    }
+  });
+  canvas.addEventListener("mousedown", jump);
+  canvas.addEventListener("touchstart", function(e) { e.preventDefault(); jump(); });
+
+  draw();
+  loop();
+})();
+</script>
+"""
 
 
 def format_inr(value, decimals=2):
@@ -341,6 +478,9 @@ elif st.session_state.step == "allocation":
         st.plotly_chart(fig_pie, use_container_width=True)
 
     if "final_df" not in st.session_state:
+        with st.expander("Click here to play a game while the data loads"):
+            components.html(DINO_GAME_HTML, height=260)
+
         progress_bar = st.progress(0.0, text="Starting fund data fetch...")
 
         def _update_progress(done, total):
