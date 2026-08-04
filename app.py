@@ -346,7 +346,7 @@ elif st.session_state.step == "allocation":
         def _update_progress(done, total):
             progress_bar.progress(done / total, text=f"Fetched {done}/{total} funds...")
 
-        with st.spinner("Fetching mutual fund data from mfapi.in (~30-60s)..."):
+        with st.spinner("Fetching mutual fund data from mfapi.in (~2-3 min)..."):
             st.session_state.final_df = fetch_all_fund_data(_progress_callback=_update_progress)
         progress_bar.empty()
 
