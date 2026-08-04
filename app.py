@@ -65,14 +65,14 @@ DINO_GAME_HTML = """
   const ctx = canvas.getContext("2d");
   const groundY = 150;
 
-  let runner = { x: 50, y: groundY - 40, width: 34, height: 40, vy: 0, jumping: false };
-  const gravity = 1.5;
-  const jumpStrength = -18;
+  let runner = { x: 50, y: groundY - 44, width: 46, height: 44, vy: 0, jumping: false };
+  const gravity = 1.3;
+  const jumpStrength = -15;
 
   let obstacles = [];
   let frame = 0;
   let score = 0;
-  let speed = 6;
+  let speed = 3.2;
   let gameOver = false;
   let started = false;
 
@@ -83,13 +83,13 @@ DINO_GAME_HTML = """
     obstacles = [];
     frame = 0;
     score = 0;
-    speed = 6;
+    speed = 3.2;
     gameOver = false;
     started = true;
   }
 
   function spawnObstacle() {
-    const h = 28 + Math.random() * 22;
+    const h = 26 + Math.random() * 20;
     obstacles.push({ x: canvas.width, y: groundY - h, width: 18, height: h });
   }
 
@@ -105,7 +105,7 @@ DINO_GAME_HTML = """
       runner.jumping = false;
     }
 
-    if (frame % Math.max(38, 90 - Math.floor(speed * 2)) === 0) {
+    if (frame % Math.max(55, 100 - Math.floor(speed * 4)) === 0) {
       spawnObstacle();
     }
 
@@ -113,14 +113,59 @@ DINO_GAME_HTML = """
     obstacles = obstacles.filter(o => o.x + o.width > 0);
 
     for (const o of obstacles) {
-      if (runner.x < o.x + o.width && runner.x + runner.width > o.x &&
-          runner.y < o.y + o.height && runner.y + runner.height > o.y) {
+      if (runner.x + 6 < o.x + o.width && runner.x + runner.width - 6 > o.x &&
+          runner.y + 4 < o.y + o.height && runner.y + runner.height > o.y) {
         gameOver = true;
       }
     }
 
     score++;
-    if (score % 300 === 0) speed += 0.5;
+    if (score % 500 === 0) speed += 0.3;
+  }
+
+  // Original T-Rex-style silhouette (own art, drawn from primitive shapes —
+  // not a reproduction of any existing game's sprite/assets).
+  function drawTRex(x, bottomY, jumping, legPhase) {
+    const c = "#2E5339"; // dino body color
+    ctx.fillStyle = c;
+
+    // Tail (triangle, back-left)
+    ctx.beginPath();
+    ctx.moveTo(x, bottomY - 20);
+    ctx.lineTo(x - 12, bottomY - 26);
+    ctx.lineTo(x, bottomY - 30);
+    ctx.closePath();
+    ctx.fill();
+
+    // Torso
+    ctx.fillRect(x, bottomY - 34, 24, 22);
+
+    // Neck + head block
+    ctx.fillRect(x + 16, bottomY - 46, 20, 20);
+    // Snout
+    ctx.fillRect(x + 32, bottomY - 38, 12, 10);
+
+    // Small arm
+    ctx.fillRect(x + 18, bottomY - 24, 5, 8);
+
+    // Eye
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x + 30, bottomY - 42, 5, 5);
+    ctx.fillStyle = "#111111";
+    ctx.fillRect(x + 32, bottomY - 41, 2, 2);
+
+    // Legs (animated when running, static split when jumping)
+    ctx.fillStyle = c;
+    if (jumping) {
+      ctx.fillRect(x + 4, bottomY - 12, 7, 12);
+      ctx.fillRect(x + 15, bottomY - 12, 7, 12);
+    } else if (legPhase) {
+      ctx.fillRect(x + 3, bottomY - 12, 7, 12);
+      ctx.fillRect(x + 16, bottomY - 8, 7, 8);
+    } else {
+      ctx.fillRect(x + 3, bottomY - 8, 7, 8);
+      ctx.fillRect(x + 16, bottomY - 12, 7, 12);
+    }
   }
 
   function draw() {
@@ -132,14 +177,16 @@ DINO_GAME_HTML = """
     ctx.lineTo(canvas.width, groundY);
     ctx.stroke();
 
-    // Runner (simple silhouette, own art — not Chrome's dino sprite)
-    ctx.fillStyle = "#118AB2";
-    ctx.fillRect(runner.x, runner.y, runner.width, runner.height);
-    ctx.fillRect(runner.x + runner.width - 10, runner.y - 8, 14, 12);
+    const legPhase = Math.floor(frame / 8) % 2 === 0;
+    drawTRex(runner.x, runner.y + runner.height, runner.jumping, legPhase);
 
-    // Obstacles
+    // Obstacles (simple cactus look — a stem with two side spikes)
     ctx.fillStyle = "#06D6A0";
-    obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.width, o.height));
+    obstacles.forEach(o => {
+      ctx.fillRect(o.x + o.width / 2 - 3, o.y, 6, o.height);
+      ctx.fillRect(o.x, o.y + o.height * 0.3, o.width / 2 - 2, 5);
+      ctx.fillRect(o.x + o.width / 2 + 2, o.y + o.height * 0.5, o.width / 2 - 2, 5);
+    });
 
     ctx.fillStyle = "#535353";
     ctx.font = "16px monospace";
