@@ -502,10 +502,21 @@ elif st.session_state.step == "allocation":
             progress_bar.progress(done / total, text=f"Fetched {done}/{total} funds...")
 
         with st.spinner("Fetching mutual fund data from mfapi.in (~2-3 min)..."):
-            st.session_state.final_df = fetch_all_fund_data(_progress_callback=_update_progress)
+            fetched_df, skipped_funds = fetch_all_fund_data(_progress_callback=_update_progress)
+            st.session_state.final_df = fetched_df
+            st.session_state.skipped_funds = skipped_funds
         progress_bar.empty()
 
     final_df = st.session_state.final_df
+    if st.session_state.get("skipped_funds"):
+        with st.expander(f"ℹ️ {len(st.session_state.skipped_funds)} fund(s) skipped — click for details"):
+            st.write(
+                "These curated funds couldn't be matched to a live scheme on mfapi.in right now "
+                "(likely renamed, merged, or delisted since this list was put together), so they "
+                "were excluded rather than breaking the whole run:"
+            )
+            for name in st.session_state.skipped_funds:
+                st.write(f"- {name}")
 
     st.subheader("Top 10 Funds per Category")
     for category in CATEGORIES:
