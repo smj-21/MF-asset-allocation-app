@@ -194,6 +194,13 @@ def fetch_all_fund_data(_progress_callback=None):
     results almost instantly.
 
     _progress_callback(done, total) is called after each fund if provided.
+
+    Returns:
+        final_df (pd.DataFrame): merged fund data, one row per successfully
+            matched-and-fetched fund.
+        skipped_funds (list[str]): curated fund names that couldn't be matched
+            to a live mfapi.in scheme (e.g. renamed/merged funds) and were
+            excluded rather than crashing the whole pipeline.
     """
     curated_df = build_curated_df()
 
@@ -201,6 +208,12 @@ def fetch_all_fund_data(_progress_callback=None):
     curated_df["scheme_code"], curated_df["matched_name"] = zip(
         *curated_df["fund_name"].apply(lambda name: find_scheme_code(name, scheme_list))
     )
+
+    # Some curated fund names may no longer match any live scheme (renamed,
+    # merged, or delisted since this list was curated) -- drop those rather
+    # than crashing on int(NaN) further down.
+    skipped_funds = curated_df.loc[curated_df["scheme_code"].isna(), "fund_name"].tolist()
+    curated_df = curated_df[curated_df["scheme_code"].notna()].reset_index(drop=True)
 
     total = len(curated_df)
     all_metrics = []
@@ -211,10 +224,12 @@ def fetch_all_fund_data(_progress_callback=None):
             metrics = compute_fund_metrics(nav_df)
             metrics["scheme_code"] = scheme_code
             all_metrics.append(metrics)
+        else:
+            skipped_funds.append(row["fund_name"])
         if _progress_callback is not None:
             _progress_callback(i, total)
 
     metrics_df = pd.DataFrame(all_metrics)
     final_df = curated_df.merge(metrics_df, on="scheme_code")
 
-    return final_df
+    return final_df, skipped_funds
